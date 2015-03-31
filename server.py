@@ -78,11 +78,6 @@ def notfound(request):
 	global localCache
 	return Response(localCache['./notfound.html'], status='404 Not Found')
 
-def updateMatchId():
-	updater.updateMatch()
-	print "After Update"
-	t = Timer(10.0, updateMatchId)
-	t.start()
 
 def testHomePage(request):
 	global localCache
@@ -123,14 +118,6 @@ def fontRouteReturn(request):
 	else:
 		return notfound(request)
 
-def bootstrapRouteReturn(request):
-	global localCache
-	reqDict = request.matchdict
-	key = "./bootstrap/" + reqDict['subfold'] + "/" + reqDict['file']
-	if key in localCache:
-		return Response(localCache[key], content_type = getContentType(key))
-	else:
-		return notfound(request)
 
 def riotRouteReturn(request):
 	global localCache
@@ -155,7 +142,6 @@ if __name__ == '__main__':
 			config.add_view(getViewLambda(doc), name=os.path.basename(doc))
 	config.add_route("fontroute", "/font-awesome-4.2.0/{subfold}/{file}")
 	config.add_route("img", "/img/{file}")
-	config.add_route("bootstrap", "/bootstrap/{subfold}/{file}")
 	config.add_route("riotroute", "/riot/{file}")
 
 
@@ -169,12 +155,8 @@ if __name__ == '__main__':
 	config.add_view(serveRiotApp, name="whendidchrislastdie")
 	config.add_view(serveRiotApp, name="chrispls")
 	config.add_view(serveRiotApp, name="riot")
-	config.add_view(goodbye_world, name='goodbye')
-	config.add_view(serveMoodRhythm, name="moodrhythm")
-	config.add_view(serveVisualIndex, name="olympics")
 	config.add_view(deathApp, name='player_data.json')
 
-	config.add_view(testRq, name="test.png")
 	config.add_notfound_view(notfound)
 	app = config.make_wsgi_app()
 	championMapUpdater = timers.BackgroundUpdater(86400.0, updater.setChampIdMap).start()
