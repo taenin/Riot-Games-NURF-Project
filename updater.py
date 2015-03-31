@@ -1,6 +1,7 @@
 import requests
 import json
 import config
+import os
 playerId = 20404838
 baseURL = "https://na.api.pvp.net"
 keyURL = "?api_key=" + config.key
@@ -10,6 +11,26 @@ dataResponse = {}
 champIdMap = {}
 PLAYER = {"teamId": 0, "championId" : 0}
 
+def writeMatch(matchId, day, time):
+	"""
+	Writes '[matchId].json' to the directory [day] and subdirectory [time]
+	If the directories do not exist they are created.
+	[day] should be a string without whitespace
+	[time] should be a string without whitespace
+	"""
+	path = os.path.join(day,time)
+	fileLocation = os.path.join(path, str(matchId)+'.json')
+	if not os.path.exists(day):
+		os.makedirs(day)
+	if not os.path.exists(path):
+		os.makedirs(path)
+	with open(fileLocation, 'wb') as temp_file:
+		try:
+			json.dump(getNewMatch(matchId), temp_file)
+		except:
+			print "Writing Match " + str(matchId) + " Failed."
+			pass
+		
 
 def updateMatch():
 	""" Makes a GET call to the Riot API to verify that the most recent game in which playerId died
