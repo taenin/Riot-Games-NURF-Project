@@ -19,9 +19,10 @@ class Worker():
 		"""Start time is a valid long in EPOCH time. This time must be a number that corresponds to an exact 5-minute time
 		For example, 11:05 (converted to EPOCh time) is valid, but 11:04 is not
 		"""
-		self.latestTime = startTime
+		self.latestTime = int(startTime)
 		self.keyURL = "?api_key=" + config.key
 		self.matchQueue = [] #this is a list of tuples (matchId, timeBucket)
+		print "Initialized Worker. Starting to scrape..."
 
 	def getNewMatchList(self):
 		"""We update self.matchQueue with the current results found at time self.latestTime
@@ -29,6 +30,7 @@ class Worker():
 		try:
 			pipe = requests.get("https://na.api.pvp.net/api/lol/na/v4.1/game/ids" + self.keyURL + "&beginDate=" + str(self.latestTime))
 			self.matchQueue = self.matchQueue + map(lambda x: (x, self.latestTime), pipe.json())
+			print "Added new data for time " + str(self.latestTime)
 			return True
 		except:
 			print "Failed to get a new match list for time: " + str(self.latestTime)
@@ -53,8 +55,10 @@ class Worker():
 		[day] should be a string without whitespace
 		[tm] should be a string without whitespace
 		"""
-		path = os.path.join(day,tm)
+		path = os.path.join("data",day,tm)
 		fileLocation = os.path.join(path, str(matchId)+'.json')
+		if not os.path.exists("data"):
+			os.makedirs("data")
 		if not os.path.exists(day):
 			os.makedirs(day)
 		if not os.path.exists(path):
@@ -62,6 +66,7 @@ class Worker():
 		with open(fileLocation, 'wb') as temp_file:
 			try:
 				json.dump(getNewMatch(matchId), temp_file)
+				print "Successfully wrote match " + str(matchId)
 			except:
 				print "Writing Match " + str(matchId) + " Failed."
 				pass
