@@ -2,34 +2,81 @@ import requests
 import json
 import config
 import os
+import time
 playerId = 20404838
 baseURL = "https://na.api.pvp.net"
 keyURL = "?api_key=" + config.key
 getChampsURL = "/api/lol/static-data/na/v1.2/champion"
-matchId = 0
+latestTime = 0
 dataResponse = {}
 champIdMap = {}
 PLAYER = {"teamId": 0, "championId" : 0}
 
-def writeMatch(matchId, day, time):
-	"""
-	Writes '[matchId].json' to the directory [day] and subdirectory [time]
-	If the directories do not exist they are created.
-	[day] should be a string without whitespace
-	[time] should be a string without whitespace
-	"""
-	path = os.path.join(day,time)
-	fileLocation = os.path.join(path, str(matchId)+'.json')
-	if not os.path.exists(day):
-		os.makedirs(day)
-	if not os.path.exists(path):
-		os.makedirs(path)
-	with open(fileLocation, 'wb') as temp_file:
+class Worker():
+	"""Used to scrape URF data at regular intervals and save them to disk for later use"""
+
+	def __init__(self, startTime):
+		"""Start time is a valid long in EPOCH time. This time must be a number that corresponds to an exact 5-minute time
+		For example, 11:05 (converted to EPOCh time) is valid, but 11:04 is not
+		"""
+		self.latestTime = startTime
+		self.keyURL = "?api_key=" + config.key
+		self.matchQueue = [] #this is a list of tuples (matchId, timeBucket)
+
+	def getNewMatchList(self):
+		"""We update self.matchQueue with the current results found at time self.latestTime
+		Returns True upon a success and False otherwise"""
 		try:
-			json.dump(getNewMatch(matchId), temp_file)
+			pipe = requests.get("https://na.api.pvp.net/api/lol/na/v4.1/game/ids" + self.keyURL + "&beginDate=" + str(self.latestTime))
+			self.matchQueue = self.matchQueue + map(lambda x: (x, self.latestTime), pipe.json())
+			return True
 		except:
-			print "Writing Match " + str(matchId) + " Failed."
-			pass
+			print "Failed to get a new match list for time: " + str(self.latestTime)
+			return False
+
+
+	def getDay(self):
+		"""Returns a string of the form [dayOfYearAsInt]_[YYYY]"""
+		tm = time.localtime()
+		return str(tm.tm_yday) + "_" + str(tm.tm_year)
+
+	def updateTime(self):
+		self.latestTime +=300
+
+	def currentTime(self):
+		return int(time.time())
+
+	def writeMatch(self, matchId, day, tm):
+		"""
+		Writes '[matchId].json' to the directory [day] and subdirectory [tm]
+		If the directories do not exist they are created.
+		[day] should be a string without whitespace
+		[tm] should be a string without whitespace
+		"""
+		path = os.path.join(day,tm)
+		fileLocation = os.path.join(path, str(matchId)+'.json')
+		if not os.path.exists(day):
+			os.makedirs(day)
+		if not os.path.exists(path):
+			os.makedirs(path)
+		with open(fileLocation, 'wb') as temp_file:
+			try:
+				json.dump(getNewMatch(matchId), temp_file)
+			except:
+				print "Writing Match " + str(matchId) + " Failed."
+				pass
+
+	def updateInformation(self):
+		"""Verifies that we do not need to update our matchQueue. If an udate is in order, update the matchQueue.
+		After updating, we process a single element from the matchQueue. We assume this function is called with an adequate politeness policy (3 seconds between calls)"""
+		#If our current time more than 25 minutes after the latest time, update 
+		if self.currentTime() > self.latestTime + 1500 and self.getNewMatchList():
+			self.updateTime()
+		if len(self.matchQueue) > 0:
+			(matchId, tm) = self.matchQueue.pop(0)
+			self.writeMatch(matchId, self.getDay(), str(tm))
+
+
 		
 
 def updateMatch():
@@ -44,8 +91,9 @@ def updateMatch():
 	RETURNS: True if matchid.txt is updated with a new ID, False otherwise"""
 	global matchId
 	global PLAYER
+	global keyURL
 	try:
-		pipe = requests.get("https://na.api.pvp.net/api/lol/na/v1.3/game/by-summoner/"+ str(playerId)+"/recent?api_key=9de0181c-92fb-4aa9-86a4-d730008680b6")
+		pipe = requests.get("https://na.api.pvp.net/api/lol/na/v1.3/game/by-summoner/"+ str(playerId)+"/recent" + keyURL)
 		wrapperMap = pipe.json()
 		for game in wrapperMap["games"]:
 			if 'numDeaths' in game['stats'] and game['stats']['numDeaths'] > 0:
@@ -100,6 +148,7 @@ def getChampMap():
 	"""Returns the champion map as a dictionary
 	Returns the old championIdMap if the API has changed or the request fails"""
 	global champIdMap
+	global keyURL
 	try:
 		file = requests.get("https://na.api.pvp.net/api/lol/static-data/na/v1.2/champion" + keyURL + "&dataById=true&champData=image")
 		wrapperMap = file.json()
@@ -118,7 +167,8 @@ def setChampIdMap():
 def getNewMatch(match):
 	"""Returns the match Dictionary from the API (including timeline data)
 	Will raise an error upon an invalid return to the API call"""
-	file = requests.get("https://na.api.pvp.net/api/lol/na/v2.2/match/" + str(match) +"?api_key=9de0181c-92fb-4aa9-86a4-d730008680b6&includeTimeline=true")
+	global keyURL
+	file = requests.get("https://na.api.pvp.net/api/lol/na/v2.2/match/" + str(match) + keyURL + "&includeTimeline=true")
 	return file.json()
 
 
