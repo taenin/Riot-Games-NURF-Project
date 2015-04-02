@@ -55,12 +55,12 @@ class Worker():
 		[day] should be a string without whitespace
 		[tm] should be a string without whitespace
 		"""
-		path = os.path.join("data",day,tm)
+		path = os.path.join("data",day, tm)
 		fileLocation = os.path.join(path, str(matchId)+'.json')
-		if not os.path.exists("data"):
-			os.makedirs("data")
-		if not os.path.exists(day):
-			os.makedirs(day)
+		#if not os.path.exists("data"):
+		#	os.makedirs("data")
+		#if not os.path.exists(day):
+		#	os.makedirs(day)
 		if not os.path.exists(path):
 			os.makedirs(path)
 		with open(fileLocation, 'wb') as temp_file:
@@ -77,6 +77,7 @@ class Worker():
 		#If our current time more than 25 minutes after the latest time, update 
 		if self.currentTime() > self.latestTime + 1500 and self.getNewMatchList():
 			self.updateTime()
+			print "Queue Size is now" + str(len(self.matchQueue))
 		if len(self.matchQueue) > 0:
 			(matchId, tm) = self.matchQueue.pop(0)
 			self.writeMatch(matchId, self.getDay(), str(tm))
