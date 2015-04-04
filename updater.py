@@ -96,12 +96,11 @@ def createMaps(validExtensions=[".json"]):
 				try:
 					with open(key) as data_file:    
 						fileR = json.load(data_file)
-					
-					print "Read " + key
+					updateMaps(fileR, allyMap, opponentMap)
 				except:
 					print "Failed to read " + key
 					fileR = {}
-				updateMaps(fileR, allyMap, opponentMap)
+				
 	with open('allies.json', 'wb') as data_file:
 		json.dump(allyMap, data_file)
 	with open('opponents.json', 'wb') as data_file:
