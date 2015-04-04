@@ -84,6 +84,69 @@ class Worker():
 
 
 		
+def createMaps(validExtensions=[".json"]):
+	allyMap = {}
+	opponentMap = {}
+	for root, dirs, files in os.walk("."):
+	    for name in files:
+	    	key = os.path.join(root, name).replace("\\","/")
+	        fileName, fileExtension = os.path.splitext(key)
+	        if fileExtension.lower() in validExtensions:
+				fileR = {}
+				try:
+					with open(key) as data_file:    
+						fileR = json.load(data_file)
+					
+					print "Read " + key
+				except:
+					print "Failed to read " + key
+					fileR = {}
+				updateMaps(fileR, allyMap, opponentMap)
+	with open('allies.json', 'wb') as data_file:
+		json.dump(allyMap, data_file)
+	with open('opponents.json', 'wb') as data_file:
+		json.dump(opponentMap, data_file)
+
+
+def updateMaps(matchMap, friendMap, opponentMap):
+	"""Given a matchMap representing a valid game, updates friendArray and opponentArray in place given the 10
+	champions in the game. 
+	"""
+	AChamps = []
+	BChamps = []
+	for champ in matchMap['participants']:
+		if champ['teamId'] ==100:
+			AChamps.append(champ['championId'])
+		else:
+			BChamps.append(champ['championId'])
+	updateAllies(AChamps, friendMap)
+	updateAllies(BChamps, friendMap)
+	updateOpponents(AChamps, BChamps, opponentMap)
+
+
+def updateOpponents(Alist, Blist, opponentMap):
+	for champ in Alist:
+		for enemy in Blist:
+			updateMapKey(champ, enemy, opponentMap)
+			updateMapKey(enemy, champ, opponentMap)
+
+
+def updateAllies(friendList, friendMap):
+	for champ in friendList:
+		for ally in friendList:
+			if ally is not champ:
+				updateMapKey(champ, ally, friendMap)
+
+def updateMapKey(initkey, key, map):
+	"""Increases the value of map[key] by 1. If map[key] does not exist, map[key] is given a value of 1"""
+	if initkey not in map:
+		map[initkey] = {}
+	if key not in map[initkey]:
+		map[initkey][key] = 0
+	map[initkey][key] = map[initkey][key] +1
+	
+
+
 
 def updateMatch():
 	""" Makes a GET call to the Riot API to verify that the most recent game in which playerId died
