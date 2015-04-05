@@ -1,0 +1,225 @@
+<html>
+<head>	
+<script src="http://d3js.org/d3.v3.min.js"></script>
+</head>
+<body>
+<center>
+	<div id="network"></div>
+</center>
+	<script>
+	var imgWidth = 45;
+	var height = 1000;
+	var width = 1000;
+	
+	var svg = d3.select("#network").append("svg").attr("height", height).attr("width", width);
+	
+	// Create a force directed layout object, which will set
+	//  x and y pixel coordinates for nodes and edges, similar
+	//  to how we use scales and map projections.
+	var force = d3.layout.force()
+	  .charge(-100)
+	  .size([width, height]);
+
+  // Make an empty graph
+	var graph = { nodes: [], links: [] };
+		
+	var initialFollowers = 0.01;
+	
+	//Get Data
+	var allies, opponents, pictures, remaining = 3;
+	d3.json("allies.json", function(data){
+		allies = data;
+		if(!--remaining) generateDisplay();
+	});
+	d3.json("opponents.json", function(data){
+		opponents = data;
+		if(!--remaining) generateDisplay();
+	});
+	d3.json("pictures.json", function(data){
+		pictures = data;
+		if(!--remaining) generateDisplay();
+	});
+
+	var generateDisplay = function(){
+		//Create a graph
+		var keylist = Object.keys(allies);
+		console.log('new display');
+		var graph = { nodes: [], links: [] };
+		// Create Nodes
+		for (var champId in allies) {
+			var newNode = { id: champId, friends: Object.keys(allies[champId]).map(function(id){return {source: keylist.indexOf(champId), target: keylist.indexOf(id)};}),
+			foes: Object.keys(opponents[champId]).map(function(id){return {source: keylist.indexOf(champId), target: keylist.indexOf(id)};})};
+			graph.nodes.push(newNode);
+
+			//Generate edges:
+			//graph.links = graph.links.concat(newNode.friends, newNode.foes);
+
+		}
+		console.log(graph)	
+	
+	/*
+	// Create nodes
+	for (var i = 0; i < 30; i++) {
+		graph.nodes.push({ id: i, followers: initialFollowers });
+	}	
+	
+	var neighbors = function(id, origin) {
+		var result = [];
+		
+		graph.links.forEach( function(link) {
+			if (link.source == id && link.target != origin) {
+				result.push(link.target);
+			}
+			else if (link.target == id && link.source != origin) {
+				result.push(link.source);
+			}
+		} );
+		
+		return result;
+	};
+	
+	var sampleNode = function(list) {
+		if (list.length == 0) {
+			return Math.floor( Math.random() * graph.nodes.length );
+		}
+		else {
+			return list[ Math.floor( Math.random() * list.length ) ];
+		}
+		
+	};
+	
+	// Create edges
+	for (var i = 0; i < 60; i++) {
+		var source = Math.floor( Math.random() * graph.nodes.length );
+		
+		var oneStepNeighbors = neighbors(source, source);
+
+		if (oneStepNeighbors.length == 0 || Math.random() < .1) {
+			target = sampleNode([]);
+		}
+		else {
+  		var twoStepNeighbors = neighbors( sampleNode(oneStepNeighbors), source );				
+			target = sampleNode(twoStepNeighbors);
+		}
+		
+		
+		// Add the link, and increase the target's number of followers
+		graph.links.push({ source: source, target: target });
+	} */
+	
+	// Set up the image pattern
+	/*var pattern = svg.append("defs").attr("id", "mdef");
+
+	var genPattern = function(patternParent, id, imgMap){
+		patternParent.append("pattern")
+			.attr("id", id)
+			.attr("x", 0)
+			.attr("y", 0)
+			.attr("height", 40)
+			.attr("width", 40)
+			.append("image")
+				.attr("x", 0)
+				.attr("y", 0)
+				.attr("height", 40)
+				.attr("width", 40)
+				.attr("xlink:href", imgMap[id].image);
+	};*/
+	//graph.nodes.forEach(function(node){genPattern(pattern, node.id, pictures);});
+
+	svg.append("clipPath")
+		.attr("id", "clipCircle")
+		.append("circle")
+			.attr("r", imgWidth / 2)
+			.attr("cx", 0)
+			.attr("cy", 0);
+var force = d3.layout.force()
+    .gravity(.05)
+    .distance(100)
+    .charge(-100)
+    .size([width, height]);
+
+
+      force.nodes(graph.nodes)
+      .links(graph.links)
+      .start();
+
+  var link = svg.selectAll(".link")
+      .data(graph.links)
+    .enter().append("line")
+      .attr("class", "link");
+
+  var node = svg.selectAll(".node")
+      .data(graph.nodes)
+    .enter().append("g")
+      .attr("class", "node")
+      .call(force.drag);
+
+  node.append("image")
+      .attr("xlink:href", function(d){return pictures[d.id].image;})
+      .attr("clip-path", "url(#clipCircle)")
+      .attr("x", -1*imgWidth / 2)
+      .attr("y", -1*imgWidth /2)
+      .attr("width", imgWidth)
+      .attr("height", imgWidth);
+
+	// Start the layout timer
+  /*force.nodes(graph.nodes)
+    .links(graph.links)
+	  .start();
+	
+	var link = svg.selectAll("line")
+	 .data(graph.links)
+	 .enter()
+	 .append("line")
+	 .attr("class", "link")
+	 .attr("stroke", "black");
+	
+  var node = svg.selectAll(".node")
+  	.data(graph.nodes)
+  	.enter().append("g")
+  		.attr("class", "node")
+  		.call(force.drag);
+
+  node.append("image")
+  	.attr("xlink:href", function(d){return pictures[d.id].image;})
+  	.attr("x", -10)
+  	.attr("y", -10)
+  	.attr("height", 20)
+  	.attr("width", 20);
+   /*.data(graph.nodes)
+	 .enter()
+	 .append("circle")
+	 .style("fill", function(d){return "url(#" + d.id + ")";})
+	 .attr("class", "node")
+	 .attr("r", 20)
+	 .append("image")
+	 	.attr("xlink:href", function(d){return pictures[d.id];})
+	 .call(force.drag); */
+	 
+   force.on("tick", function() {
+
+     link.attr("x1", function(d) { return d.source.x; })
+         .attr("y1", function(d) { return d.source.y; })
+         .attr("x2", function(d) { return d.target.x; })
+         .attr("y2", function(d) { return d.target.y; });
+
+     /*node.attr("cx", function(d) { return d.x; })
+         .attr("cy", function(d) { return d.y; });
+   });*/
+	node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+});
+};
+	
+	 </script>
+	 </body>
+	
+	</html>
+	
+	
+	
+	
+	
+	
+	
+	
+	

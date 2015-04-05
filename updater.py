@@ -87,6 +87,8 @@ class Worker():
 def createMaps(validExtensions=[".json"]):
 	allyMap = {}
 	opponentMap = {}
+	picMap = {}
+	mainMap = getChampMap()
 	for root, dirs, files in os.walk("."):
 	    for name in files:
 	    	key = os.path.join(root, name).replace("\\","/")
@@ -100,11 +102,14 @@ def createMaps(validExtensions=[".json"]):
 				except:
 					print "Failed to read " + key
 					fileR = {}
-				
+	for champId in allyMap:
+		picMap[str(champId)] = getChampPicture(str(champId), mainMap, False)
 	with open('allies.json', 'wb') as data_file:
 		json.dump(allyMap, data_file)
 	with open('opponents.json', 'wb') as data_file:
 		json.dump(opponentMap, data_file)
+	with open('pictures.json', 'wb') as data_file:
+		json.dump(picMap, data_file)
 
 
 def updateMaps(matchMap, friendMap, opponentMap):
@@ -249,25 +254,23 @@ def getPlayerId(matchData, playerData):
 			return partic['participantId']
 
 
-def getChampPicture(deathData, picMap, participantId, assists):
+def getChampPicture(champId, picMap, assists):
 	"""Returns a dictionary where "image" maps to the non-local location of a champion's image
 	If the "assists" parameter is true, additional sizing and positioning data is included
 	and the target image is a sprite (rather than a portrait)"""
 	picPrefix = "http://ddragon.leagueoflegends.com/cdn/4.21.5/img/champion/"
 	picSuffix = ".png"
 	assistPicPrefix = "http://ddragon.leagueoflegends.com/cdn/4.21.5/img/sprite/"
-	if participantId > 0:
-		champData = picMap[str(deathData["participants"][participantId-1]["championId"])]
-		if not assists:
-			return {"image": picPrefix + champData["key"] + picSuffix}
-		else:
-			return {"image": assistPicPrefix + champData["image"]["sprite"],
-					"w": champData["image"]["w"],
-					"h": champData["image"]["h"],
-					"x": champData["image"]["x"],
-					"y": champData["image"]["y"]}
+	champData = picMap[str(champId)]
+	if not assists:
+		return {"image": picPrefix + champData["key"] + picSuffix}
 	else:
-		return {"image": "http://ddragon.leagueoflegends.com/cdn/4.20.1/img/profileicon/3.png"}
+		return {"image": assistPicPrefix + champData["image"]["sprite"],
+				"w": champData["image"]["w"],
+				"h": champData["image"]["h"],
+				"x": champData["image"]["x"],
+				"y": champData["image"]["y"]}
+
 
 
 def getDeathInfo(timeline, playerData):
