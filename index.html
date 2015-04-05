@@ -1,15 +1,16 @@
 <html>
-<head>	
+<head>  
 <script src="http://d3js.org/d3.v3.min.js"></script>
 </head>
 <body>
 <center>
-	<div id="network"></div>
+    <div id="network"></div>
 </center>
 <script>
 var imgWidth = 45;
 var height = 1000;
 var width = 1000;
+currentId = 0;
 
 var svg = d3.select("#network").append("svg")
     .attr("height", height)
@@ -19,8 +20,11 @@ var svg = d3.select("#network").append("svg")
 //  x and y pixel coordinates for nodes and edges, similar
 //  to how we use scales and map projections.
 var force = d3.layout.force()
-  .charge(-100)
-  .size([width, height]);
+        //.gravity(.05)
+        //.distance(100)
+        .charge(-200)
+        .size([width, height])
+        .linkStrength(.01);
 
 // Make an empty graph
 var graph = { nodes: [], links: [] };
@@ -49,15 +53,15 @@ var generateDisplay = function() {
     //Create a graph
     var keylist = Object.keys(allies);
     console.log('new display');
-    var graph = { nodes: [], links: [] };
+    graph = { nodes: [], links: [] };
     // Create Nodes
     for (var champId in allies) {
         var newNode = {
             id: champId,
             friends: Object.keys(allies[champId]).map(
-                function(id){return {source: keylist.indexOf(champId), target: keylist.indexOf(id)};}),
+                function(id){return {source: keylist.indexOf(champId), target: keylist.indexOf(id), weight: allies[champId][id]};}),
             foes: Object.keys(opponents[champId]).map(
-                function(id){return {source: keylist.indexOf(champId), target: keylist.indexOf(id)};})
+                function(id){return {source: keylist.indexOf(champId), target: keylist.indexOf(id), weight: opponents[champId][id]};})
         };
         graph.nodes.push(newNode);
 
@@ -65,7 +69,7 @@ var generateDisplay = function() {
         //graph.links = graph.links.concat(newNode.friends, newNode.foes);
 
     }
-    console.log(graph)	
+    console.log(graph)  
 
 
     svg.append("clipPath")
@@ -75,11 +79,7 @@ var generateDisplay = function() {
             .attr("cx", 0)
             .attr("cy", 0);
 
-    var force = d3.layout.force()
-        .gravity(.05)
-        .distance(100)
-        .charge(-100)
-        .size([width, height]);
+    
 
 
     force.nodes(graph.nodes)
@@ -89,7 +89,9 @@ var generateDisplay = function() {
     var link = svg.selectAll(".link")
         .data(graph.links)
         .enter().append("line")
-        .attr("class", "link");
+        .attr("class", "link")
+        .attr("stroke", "black")
+        .attr("stroke-width", function(d){return edgeScale(d.weight);});
 
     var node = svg.selectAll(".node")
         .data(graph.nodes)
@@ -104,18 +106,24 @@ var generateDisplay = function() {
         .attr("y", -1*imgWidth / 2)
         .attr("width", imgWidth)
         .attr("height", imgWidth)
-        .on("mouseover", function() {
+        .on("mouseover", function(d) {
             //TODO IMPLEMENT MOUSEOVER
             var node2 = d3.select(this);
             node2.style("opacity", 0.5);
         })
-        .on("mouseout", function() {
+        .on("mouseout", function(d) {
             //TODO IMPLEMENT MOUSEOUT (JUST REVERSE MOUSEOVER)
             var node2 = d3.select(this);
             node2.style("opacity", 1);
+        })
+        .on("click", function(d){
+            //TODO IMPLEMENT MOUSECLICK
+            graph.links = d.friends;
+            restart(d.id);
+
         });
 
-	 
+     
     force.on("tick", function() {
 
         link.attr("x1", function(d) { return d.source.x; })
@@ -126,18 +134,37 @@ var generateDisplay = function() {
         node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
     
     });
+
+    function restart(id) {
+        if(currentId!=id){
+            link = link.data(graph.links);
+            link.exit().remove();
+            link.enter().insert("line", ".node")
+                .attr("class", "link")
+                .attr("stroke", "black")
+                .attr("stroke-width", function(d){return Math.pow(d.weight, 1/2.5);});
+            //node = node.data(graph.nodes);
+            //node.enter().insert("circle", ".cursor").attr("class", "node").attr("r", 5).call(force.drag);
+            force.links(graph.links)
+            .start();
+
+            currentId = id;
+        }
+    }
+
+
 };
-	
+    
 </script>
 </body>
 
 </html>
-	
-	
-	
-	
-	
-	
-	
-	
-	
+    
+    
+    
+    
+    
+    
+    
+    
+    
