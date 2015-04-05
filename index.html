@@ -32,19 +32,20 @@ var graph = { nodes: [], links: [] };
 var initialFollowers = 0.01;
 
 //Get Data
-var allies, opponents, pictures, remaining = 3;
+var allies, opponents, pictures;
+var remaining = 3;
 
-d3.json("allies.json", function(data){
+d3.json("allies.json", function(data) {
     allies = data;
     if(!--remaining) generateDisplay();
 });
 
-d3.json("opponents.json", function(data){
+d3.json("opponents.json", function(data) {
     opponents = data;
     if(!--remaining) generateDisplay();
 });
 
-d3.json("pictures.json", function(data){
+d3.json("pictures.json", function(data) {
     pictures = data;
     if(!--remaining) generateDisplay();
 });
