@@ -19,8 +19,8 @@ var svg = d3.select("#network").append("svg")
 //  x and y pixel coordinates for nodes and edges, similar
 //  to how we use scales and map projections.
 var force = d3.layout.force()
-  .charge(-100)
-  .size([width, height]);
+    .charge(-100)
+    .size([width, height]);
 
 // Make an empty graph
 var graph = { nodes: [], links: [] };
@@ -28,19 +28,20 @@ var graph = { nodes: [], links: [] };
 var initialFollowers = 0.01;
 
 //Get Data
-var allies, opponents, pictures, remaining = 3;
+var allies, opponents, pictures;
+var remaining = 3;
 
-d3.json("allies.json", function(data){
+d3.json("allies.json", function(data) {
     allies = data;
     if(!--remaining) generateDisplay();
 });
 
-d3.json("opponents.json", function(data){
+d3.json("opponents.json", function(data) {
     opponents = data;
     if(!--remaining) generateDisplay();
 });
 
-d3.json("pictures.json", function(data){
+d3.json("pictures.json", function(data) {
     pictures = data;
     if(!--remaining) generateDisplay();
 });
