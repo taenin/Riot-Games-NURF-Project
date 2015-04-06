@@ -89,6 +89,8 @@ def createMaps(validExtensions=[".json"]):
 	opponentMap = {}
 	picMap = {}
 	prefixMap = {}
+	itemMap = {}
+	champToItemsMap = {}
 	refMap = getChampMapByKeys()
 	refMap["Wukong"] = refMap["MonkeyKing"]
 	refMap = createLowerCaseKeys(refMap)
@@ -105,13 +107,18 @@ def createMaps(validExtensions=[".json"]):
 				try:
 					with open(key) as data_file:    
 						fileR = json.load(data_file)
-					updateMaps(fileR, allyMap, opponentMap)
+					updateMaps(fileR, allyMap, opponentMap, champToItemsMap)
 				except:
 					print "Failed to read " + key
 					fileR = {}
 	for champId in allyMap:
 		picMap[str(champId)] = getChampPicture(str(champId), mainMap, False)
 	prefixMap = createChampPrefixMap(refMap)
+
+	with open('itemstats.json', 'wb') as data_file:
+		json.dump(champToItemsMap, data_file)
+	with open('imgData.json', 'wb') as data_file:
+		json.dump(createItemMap(itemMap), data_file)
 	with open('pmap.json', 'wb') as data_file:
 		json.dump(prefixMap, data_file)
 	with open('searchData.json', 'wb') as data_file:
@@ -122,6 +129,13 @@ def createMaps(validExtensions=[".json"]):
 		json.dump(opponentMap, data_file)
 	with open('pictures.json', 'wb') as data_file:
 		json.dump(picMap, data_file)
+
+def createItemMap(itemMap):
+	"""Returns a smaller version of itemMap with global image locations"""
+	newMap = {}
+	for key in itemMap['data']:
+		newMap[key] = {'id': itemMap['data'][key]['id'], 'name': itemMap['data'][key]['name'], 'image': getItemPicture(key, itemMap)}
+	return newMap
 
 def createLowerCaseKeys(mapWithKeys):
 	"""We return a copy of mapWithKeys with lower-case keys, mapping from keys to a name, title, key, and id"""
@@ -176,13 +190,14 @@ def match_helper(pmap, prefix,template, guessedletters):
 			acc += match_helper(prefix+nextletter, template[1:], guessedletters)
 	return acc
 
-def updateMaps(matchMap, friendMap, opponentMap):
+def updateMaps(matchMap, friendMap, opponentMap, champItemsMap):
 	"""Given a matchMap representing a valid game, updates friendArray and opponentArray in place given the 10
 	champions in the game. 
 	"""
 	AChamps = []
 	BChamps = []
 	for champ in matchMap['participants']:
+		updateItems(champ, champItemsMap)
 		if champ['teamId'] ==100:
 			AChamps.append(champ['championId'])
 		else:
@@ -191,6 +206,11 @@ def updateMaps(matchMap, friendMap, opponentMap):
 	updateAllies(BChamps, friendMap)
 	updateOpponents(AChamps, BChamps, opponentMap)
 
+def updateItems(champ, champItemsMap):
+	for slot in range(0, 6):
+		currentItem = champ['stats']['item'  + str(slot)]
+		if currentItem !=0:
+			updateMapKey(champ['championId'], currentItem, champItemsMap)
 
 def updateOpponents(Alist, Blist, opponentMap):
 	for champ in Alist:
@@ -294,6 +314,16 @@ def getChampMap():
 	except:
 		return champIdMap
 
+def getItemMap():
+	"""Returns the item map as a dictionary"""
+	global keyURL
+	try:
+		file = requests.get("https://na.api.pvp.net/api/lol/static-data/na/v1.2/item" + keyURL + "&itemListData=all")
+		wrapperMap = file.json()
+		return wrapperMap
+	except:
+		return {}
+
 def getChampMapByKeys():
 	"""Returns the champion map as a dictionary. The keys are string representations of champions
 	Returns the old championIdMap if the API has changed or the request fails"""
@@ -335,10 +365,10 @@ def getChampPicture(champId, picMap, assists):
 	"""Returns a dictionary where "image" maps to the non-local location of a champion's image
 	If the "assists" parameter is true, additional sizing and positioning data is included
 	and the target image is a sprite (rather than a portrait)"""
-	picPrefix = "http://ddragon.leagueoflegends.com/cdn/4.21.5/img/champion/"
+	picPrefix = "http://ddragon.leagueoflegends.com/cdn/"+ picMap['version'] + "/img/champion/"
 	picSuffix = ".png"
-	assistPicPrefix = "http://ddragon.leagueoflegends.com/cdn/4.21.5/img/sprite/"
-	champData = picMap[str(champId)]
+	assistPicPrefix = "http://ddragon.leagueoflegends.com/cdn/"+ picMap['version'] + "/img/sprite/"
+	champData = picMap["data"][str(champId)]
 	if not assists:
 		return {"image": picPrefix + champData["key"] + picSuffix}
 	else:
@@ -348,7 +378,13 @@ def getChampPicture(champId, picMap, assists):
 				"x": champData["image"]["x"],
 				"y": champData["image"]["y"]}
 
-
+def getItemPicture(id, itemMap):
+	"""Returns a string representing the non-local location of the item picture"""
+	picPrefix = "http://ddragon.leagueoflegends.com/cdn/"+ itemMap['version'] + "/img/"+ itemMap['type'] +"/"
+	try:
+		return picPrefix + itemMap['data'][id]['image']['full']
+	except:
+		return ""
 
 def getDeathInfo(timeline, playerData):
 	"""Returns a dictionary containing relevant player data from the player's most recent deathData
