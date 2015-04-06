@@ -88,7 +88,14 @@ def createMaps(validExtensions=[".json"]):
 	allyMap = {}
 	opponentMap = {}
 	picMap = {}
+	prefixMap = {}
+	refMap = getChampMapByKeys()
+	refMap["Wukong"] = refMap["MonkeyKing"]
+	refMap = createLowerCaseKeys(refMap)
 	mainMap = getChampMap()
+
+	#add a key for wukong
+	
 	for root, dirs, files in os.walk("."):
 	    for name in files:
 	    	key = os.path.join(root, name).replace("\\","/")
@@ -104,6 +111,11 @@ def createMaps(validExtensions=[".json"]):
 					fileR = {}
 	for champId in allyMap:
 		picMap[str(champId)] = getChampPicture(str(champId), mainMap, False)
+	prefixMap = createChampPrefixMap(refMap)
+	with open('pmap.json', 'wb') as data_file:
+		json.dump(prefixMap, data_file)
+	with open('searchData.json', 'wb') as data_file:
+		json.dump(refMap, data_file)
 	with open('allies.json', 'wb') as data_file:
 		json.dump(allyMap, data_file)
 	with open('opponents.json', 'wb') as data_file:
@@ -111,6 +123,58 @@ def createMaps(validExtensions=[".json"]):
 	with open('pictures.json', 'wb') as data_file:
 		json.dump(picMap, data_file)
 
+def createLowerCaseKeys(mapWithKeys):
+	"""We return a copy of mapWithKeys with lower-case keys, mapping from keys to a name, title, key, and id"""
+	newMapWithKeys = {}
+	for word in mapWithKeys:
+		champ = mapWithKeys[word]
+		newMapWithKeys[word.lower()] = {'name': champ['name'], 'title': champ['title'], 'key': champ['key'], 'id': champ['id'] }
+	return newMapWithKeys
+
+def createChampPrefixMap(mapWithKeys):
+	"""Returns a prefix map containing the words (keys) of [mapWithKeys]
+		"""
+	pmap = {}
+	
+	for word in mapWithKeys:
+		pmap_add_word(pmap, word.lower())
+	return pmap
+
+def pmap_add_word(pmap, word):
+        """Adds a single word to a prefix map."""
+        
+        for index in range(len(word)+1):
+            key = word[:index]
+            nextletter = word[index] if index < len(word) else ''
+            if(key in pmap):
+                if(nextletter not in pmap[key]):
+                    pmap[key].append(nextletter)
+            else:
+                pmap[key] = [nextletter]
+
+
+def match(pmap, template,guessedletters):
+	"""Returns the list of all valid words that match the given template.
+	template: A template for a single word containing letters and '_', where '_' denotes
+	an unknown character.
+	guessedletters is a string containing all letters  guessed in this session"""
+	return match_helper(pmap,'',template, guessedletters)
+
+
+def match_helper(pmap, prefix,template, guessedletters):
+	"""Returns the list of all valid words that start with the given prefix, and
+	whose remaining letters match the given template."""
+	if prefix not in pmap:
+		return []
+	if template == "":
+		return [prefix] if "" in pmap[prefix] else []
+	if template[0] != "_":
+		return match_helper(prefix+template[0], template[1:], guessedletters)
+	acc=[]
+	for nextletter in pmap[prefix]:
+		if nextletter != "" and nextletter not in guessedletters:
+			acc += match_helper(prefix+nextletter, template[1:], guessedletters)
+	return acc
 
 def updateMaps(matchMap, friendMap, opponentMap):
 	"""Given a matchMap representing a valid game, updates friendArray and opponentArray in place given the 10
@@ -224,6 +288,19 @@ def getChampMap():
 	global keyURL
 	try:
 		file = requests.get("https://na.api.pvp.net/api/lol/static-data/na/v1.2/champion" + keyURL + "&dataById=true&champData=image")
+		wrapperMap = file.json()
+		if "data" in wrapperMap:
+			return wrapperMap["data"]
+	except:
+		return champIdMap
+
+def getChampMapByKeys():
+	"""Returns the champion map as a dictionary. The keys are string representations of champions
+	Returns the old championIdMap if the API has changed or the request fails"""
+	global champIdMap
+	global keyURL
+	try:
+		file = requests.get("https://na.api.pvp.net/api/lol/static-data/na/v1.2/champion" + keyURL + "&champData=image")
 		wrapperMap = file.json()
 		if "data" in wrapperMap:
 			return wrapperMap["data"]

@@ -1,16 +1,64 @@
 <html>
 <head>  
 <script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+<style>
+div
+{
+    position: relative;
+}
+#mainSearch{
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 11;
+    background: transparent;
+    
+}
+#autocomplete{
+    position: absolute;    
+    top: 0;
+    left: 0; 
+    background: transparent;
+    z-index: 10;
+}
+</style>
 </head>
 <body>
 <center>
+    <div>
+        <input id="mainSearch" type="text" />
+        <input id="autocomplete" type="text" disabled="disabled" />
+    </div>
     <div id="network"></div>
 </center>
 <script>
 var imgWidth = 45;
-var height = 1000;
-var width = 1000;
+var height = 1200;
+var width = 1200;
 currentId = 0;
+
+
+function matchPrefix(pmap, prefix){
+    prefix = prefix.toLowerCase().replace(/\W/g, ''); //Make the prefix lowercase, remove any non-alphanumberic characters
+    if(!(prefix in pmap)){
+        return [];
+    }
+    var acc = [];
+    var pArray = pmap[prefix]
+    var ind;
+    for(ind = 0; ind < pArray.length; ind++){
+        if(pArray[ind] != ""){
+            acc = acc.concat(matchPrefix(pmap,prefix+pArray[ind]));
+        }
+        else{
+            acc.push(prefix);
+        }
+    }
+    return acc;
+}
+
+
 
 var svg = d3.select("#network").append("svg")
     .attr("height", height)
@@ -22,7 +70,7 @@ var svg = d3.select("#network").append("svg")
 var force = d3.layout.force()
         //.gravity(.05)
         //.distance(100)
-        .charge(-200)
+        .charge(-250)
         .size([width, height])
         .linkStrength(.01);
 
@@ -32,8 +80,20 @@ var graph = { nodes: [], links: [] };
 var initialFollowers = 0.01;
 
 //Get Data
-var allies, opponents, pictures;
+var allies, opponents, pictures, prefixMap, searchData;
 var remaining = 3;
+var remaining_data = 2;
+
+d3.json("pmap.json", function(data) {
+    prefixMap = data;
+    if(!--remaining_data) initializeSearch();
+});
+
+d3.json("searchData.json", function(data) {
+    searchData = data;
+    if(!--remaining_data) initializeSearch();
+});
+
 
 d3.json("allies.json", function(data) {
     allies = data;
@@ -49,6 +109,17 @@ d3.json("pictures.json", function(data) {
     pictures = data;
     if(!--remaining) generateDisplay();
 });
+
+function initializeSearch(){
+    $('#mainSearch').keyup(function(e){
+        var results = matchPrefix(prefixMap, $(this).val());
+        output = results.length < 1 ? "" : searchData[results[0]].name;
+        console.log($(this).val());
+        console.log(results);
+          
+        $('#autocomplete').val($(this).val() + output.slice($(this).val().length, output.length));
+    });
+}
 
 var generateDisplay = function() {
     //Create a graph
