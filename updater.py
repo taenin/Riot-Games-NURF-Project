@@ -115,7 +115,7 @@ def createMaps(validExtensions=[".json"]):
 		picMap[str(champId)] = getChampPicture(str(champId), mainMap, False)
 	prefixMap = createChampPrefixMap(refMap)
 
-	with open('itemstats.json', 'wb') as data_file:
+	"""with open('itemstats.json', 'wb') as data_file:
 		json.dump(champToItemsMap, data_file)
 	with open('imgData.json', 'wb') as data_file:
 		json.dump(createItemMap(itemMap), data_file)
@@ -128,7 +128,7 @@ def createMaps(validExtensions=[".json"]):
 	with open('opponents.json', 'wb') as data_file:
 		json.dump(opponentMap, data_file)
 	with open('pictures.json', 'wb') as data_file:
-		json.dump(picMap, data_file)
+		json.dump(picMap, data_file)"""
 
 def createItemMap(itemMap):
 	"""Returns a smaller version of itemMap with global image locations"""
@@ -310,7 +310,7 @@ def getChampMap():
 		file = requests.get("https://na.api.pvp.net/api/lol/static-data/na/v1.2/champion" + keyURL + "&dataById=true&champData=image")
 		wrapperMap = file.json()
 		if "data" in wrapperMap:
-			return wrapperMap["data"]
+			return wrapperMap
 	except:
 		return champIdMap
 
