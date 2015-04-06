@@ -127,6 +127,9 @@ function initializeSearch(){
     });
 }
 
+
+var tmpnode; // for debugging purposes
+
 var generateDisplay = function() {
     //Create a graph
     var keylist = Object.keys(allies);
@@ -150,15 +153,21 @@ var generateDisplay = function() {
     console.log(graph)  
 
 
+    var lastnode;
+    
     svg.append("clipPath")
         .attr("id", "clipCircle")
         .append("circle")
             .attr("r", imgWidth / 2)
             .attr("cx", 0)
             .attr("cy", 0);
-
-    
-
+            
+    svg.append("clipPath")
+    .attr("id", "clipCircleBig")
+    .append("circle")
+        .attr("r", imgWidth)
+        .attr("cx", 0)
+        .attr("cy", 0);
 
     force.nodes(graph.nodes)
     .links(graph.links)
@@ -186,18 +195,25 @@ var generateDisplay = function() {
         .attr("height", imgWidth)
         .on("mouseover", function(d) {
             //TODO IMPLEMENT MOUSEOVER
-            var node2 = d3.select(this);
-            node2.style("opacity", 0.5);
+            tmpnode = d3.select(this);
+            tmpnode.style("opacity", 0.5);
         })
         .on("mouseout", function(d) {
             //TODO IMPLEMENT MOUSEOUT (JUST REVERSE MOUSEOVER)
-            var node2 = d3.select(this);
-            node2.style("opacity", 1);
+            tmpnode = d3.select(this);
+            tmpnode.style("opacity", 1);
         })
         .on("click", function(d){
             //TODO IMPLEMENT MOUSECLICK
+            // makes last node clicked small again
+            if (lastnode != null) {
+                smallNode(lastnode);
+            }
+            tmpnode = d3.select(this);
             graph.links = d.friends;
             restart(d.id);
+            bigNode(tmpnode);
+            lastnode = tmpnode;
 
         });
 
@@ -219,7 +235,7 @@ var generateDisplay = function() {
             link.exit().remove();
             link.enter().insert("line", ".node")
                 .attr("class", "link")
-                .attr("stroke", "black")
+                .attr("stroke", "#3399ff")
                 .attr("stroke-width", function(d){return Math.pow(d.weight, 1/2.5);});
             //node = node.data(graph.nodes);
             //node.enter().insert("circle", ".cursor").attr("class", "node").attr("r", 5).call(force.drag);
@@ -228,6 +244,22 @@ var generateDisplay = function() {
 
             currentId = id;
         }
+    }
+    
+    function bigNode(node) {
+        node.attr("clip-path", "url(#clipCircleBig)")
+        .attr("width", imgWidth*2)
+        .attr("height", imgWidth*2)
+        .attr("x", -1*imgWidth)
+        .attr("y", -1*imgWidth);
+    }
+    
+    function smallNode(node) {
+        node.attr("clip-path", "url(#clipCircle)")
+        .attr("width", imgWidth)
+        .attr("height", imgWidth)
+        .attr("x", -1*imgWidth/2)
+        .attr("y", -1*imgWidth/2);
     }
 
 
