@@ -113,11 +113,13 @@ d3.json("pictures.json", function(data) {
 function initializeSearch(){
     $('#mainSearch').keyup(function(e){
         var results = matchPrefix(prefixMap, $(this).val());
-        output = results.length < 1 ? "" : searchData[results[0]].name;
-        console.log($(this).val());
-        console.log(results);
-          
-        $('#autocomplete').val($(this).val() + output.slice($(this).val().length, output.length));
+        var output = results.length < 1 ? "" : searchData[results[0]].name;
+        var newValue = $(this).val() + output.slice($(this).val().length, output.length);
+        if(e.key === "ArrowRight" && output!=""){
+            newValue = output;
+            $('#mainSearch').val(newValue);
+        }
+        $('#autocomplete').val(newValue);
     });
 }
 
