@@ -134,7 +134,8 @@ def createItemMap(itemMap):
 	"""Returns a smaller version of itemMap with global image locations"""
 	newMap = {}
 	for key in itemMap['data']:
-		newMap[key] = {'id': itemMap['data'][key]['id'], 'name': itemMap['data'][key]['name'], 'image': getItemPicture(key, itemMap)}
+		if "into" not in itemMap['data'][key] or len(itemMap['data'][key]['into']) < 1:
+			newMap[key] = {'id': itemMap['data'][key]['id'], 'name': itemMap['data'][key]['name'], 'image': getItemPicture(key, itemMap)}
 	return newMap
 
 def createLowerCaseKeys(mapWithKeys):
@@ -207,7 +208,7 @@ def updateMaps(matchMap, friendMap, opponentMap, champItemsMap):
 	updateOpponents(AChamps, BChamps, opponentMap)
 
 def updateItems(champ, champItemsMap):
-	for slot in range(0, 6):
+	for slot in range(0, 7):
 		currentItem = champ['stats']['item'  + str(slot)]
 		if currentItem !=0:
 			updateMapKey(champ['championId'], currentItem, champItemsMap)
