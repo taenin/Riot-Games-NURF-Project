@@ -91,6 +91,7 @@ def createMaps(validExtensions=[".json"]):
 	prefixMap = {}
 	itemMap = getItemMap()
 	champToItemsMap = {}
+	statsMap = {}
 	refMap = getChampMapByKeys()
 	refMap["Wukong"] = refMap["MonkeyKing"]
 	refMap = createLowerCaseKeys(refMap)
@@ -113,7 +114,7 @@ def createMaps(validExtensions=[".json"]):
 				try:
 					with open(key) as data_file:    
 						fileR = json.load(data_file)
-					updateMaps(fileR, allyMap, opponentMap, champToItemsMap)
+					updateMaps(fileR, allyMap, opponentMap, champToItemsMap, statsMap)
 				except:
 					print "Failed to read " + key
 					fileR = {}
@@ -128,6 +129,7 @@ def createMaps(validExtensions=[".json"]):
 		wrapperMap['ids'][str(champId)]['items'] = champToItemsMap[champId]
 
 	picMap.update(createItemMap(itemMap)) #Add items to picmap
+	picMap.update(statsMap)
 	prefixMap = createChampPrefixMap(refMap)
 
 	wrapperMap['info'] = picMap
@@ -212,14 +214,19 @@ def match_helper(pmap, prefix,template, guessedletters):
 			acc += match_helper(prefix+nextletter, template[1:], guessedletters)
 	return acc
 
-def updateMaps(matchMap, friendMap, opponentMap, champItemsMap):
+def updateMaps(matchMap, friendMap, opponentMap, champItemsMap, stats):
 	"""Given a matchMap representing a valid game, updates friendArray and opponentArray in place given the 10
 	champions in the game. 
 	"""
 	AChamps = []
 	BChamps = []
+	keylist = ['deaths', 'assists', 'kills', 'doubleKills', 'tripleKills', 'quadraKills', 'pentaKills', 'goldEarned']
 	for champ in matchMap['participants']:
 		updateItems(champ, champItemsMap)
+
+		for key in keylist:
+			updateMapKey(champ['championId'], key, stats, value = champ['stats'][key])
+		#updateMapKey(champ, "timeInGame", stats, value = matchMap['matchDuration'])
 		if champ['teamId'] ==100:
 			AChamps.append(champ['championId'])
 		else:
@@ -247,13 +254,13 @@ def updateAllies(friendList, friendMap):
 			if ally is not champ:
 				updateMapKey(champ, ally, friendMap)
 
-def updateMapKey(initkey, key, map):
-	"""Increases the value of map[key] by 1. If map[key] does not exist, map[key] is given a value of 1"""
+def updateMapKey(initkey, key, map,value = 1):
+	"""Increases the value of map[key] by value. If map[key] does not exist, map[key] is given a value of value"""
 	if initkey not in map:
 		map[initkey] = {}
 	if key not in map[initkey]:
 		map[initkey][key] = 0
-	map[initkey][key] = map[initkey][key] +1
+	map[initkey][key] = map[initkey][key] +value
 	
 
 

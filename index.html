@@ -38,6 +38,13 @@ var height = 1200;
 var width = 1600;
 currentId = 0;
 
+// node is image
+var lastNode, curNode;
+
+// d is the thing that moves
+var lastD, curD;
+
+
 function matchPrefix(pmap, prefix){
     prefix = prefix.toLowerCase().replace(/\W/g, ''); //Make the prefix lowercase, remove any non-alphanumberic characters
     if(!(prefix in pmap)){
@@ -70,7 +77,9 @@ var svg = d3.select("#network").append("svg")
 var force = d3.layout.force()
         .gravity(.08)
         //.distance(100)
-        .charge(-200)
+        .charge(function(node){
+            return curD === node ? -1000 : -200;
+        })
         .size([width, height])
         .linkStrength(function(link){
             largestWeight = Math.max.apply(Math,graph.links.map(function(o){return o.weight;}));
@@ -153,11 +162,7 @@ var generateDisplay = function() {
     }
     console.log(graph)  
 
-    // node is image
-    var lastNode, curNode;
     
-    // d is the thing that moves
-    var lastD, curD;
     
     svg.append("clipPath")
         .attr("id", "clipCircle")
