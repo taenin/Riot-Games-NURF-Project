@@ -35,8 +35,9 @@ div
 <script>
 var imgWidth = 45;
 var height = 1200;
-var width = 1600;
+var width = 1200;
 currentId = 0;
+
 
 function matchPrefix(pmap, prefix){
     prefix = prefix.toLowerCase().replace(/\W/g, ''); //Make the prefix lowercase, remove any non-alphanumberic characters
@@ -61,16 +62,15 @@ function matchPrefix(pmap, prefix){
 
 var svg = d3.select("#network").append("svg")
     .attr("height", height)
-    .attr("width", width)
-    .style("background", "black");
+    .attr("width", width);
 
 // Create a force directed layout object, which will set
 //  x and y pixel coordinates for nodes and edges, similar
 //  to how we use scales and map projections.
 var force = d3.layout.force()
-        .gravity(.08)
+        //.gravity(.05)
         //.distance(100)
-        .charge(-200)
+        .charge(-250)
         .size([width, height])
         .linkStrength(function(link){
             largestWeight = Math.max.apply(Math,graph.links.map(function(o){return o.weight;}));
@@ -139,7 +139,6 @@ var generateDisplay = function() {
     for (var champId in allies) {
         var newNode = {
             id: champId,
-            radius: imgWidth/2,
             friends: Object.keys(allies[champId]).map(
                 function(id){return {source: keylist.indexOf(champId), target: keylist.indexOf(id), weight: allies[champId][id]};}),
             foes: Object.keys(opponents[champId]).map(
@@ -155,19 +154,18 @@ var generateDisplay = function() {
 
 
     var lastnode;
-    var lastD;
     
     svg.append("clipPath")
         .attr("id", "clipCircle")
         .append("circle")
-            .attr("r", imgWidth*0.9 / 2)
+            .attr("r", imgWidth / 2)
             .attr("cx", 0)
             .attr("cy", 0);
             
     svg.append("clipPath")
     .attr("id", "clipCircleBig")
     .append("circle")
-        .attr("r", imgWidth*0.9)
+        .attr("r", imgWidth)
         .attr("cx", 0)
         .attr("cy", 0);
 
@@ -209,30 +207,25 @@ var generateDisplay = function() {
             //TODO IMPLEMENT MOUSECLICK
             // makes last node clicked small again
             if (lastnode != null) {
-                smallNode(lastnode, lastD);
+                smallNode(lastnode);
             }
             tmpnode = d3.select(this);
             graph.links = d.friends;
             restart(d.id);
-            bigNode(tmpnode, d);
+            bigNode(tmpnode);
             lastnode = tmpnode;
-            lastD = d;
 
         });
 
+     
     force.on("tick", function() {
-        var q = d3.geom.quadtree(graph.nodes),
-            i = 0,
-            n = graph.nodes.length;
-        while (++i < n) q.visit(collide(graph.nodes[i]));
+
         link.attr("x1", function(d) { return d.source.x; })
             .attr("y1", function(d) { return d.source.y; })
             .attr("x2", function(d) { return d.target.x; })
             .attr("y2", function(d) { return d.target.y; });
              
-        node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
-            .attr("x", function(d) { return d.x;})
-            .attr("y", function(d) { return d.y;});
+        node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
     
     });
 
@@ -253,46 +246,20 @@ var generateDisplay = function() {
         }
     }
     
-    function bigNode(node, d) {
+    function bigNode(node) {
         node.attr("clip-path", "url(#clipCircleBig)")
         .attr("width", imgWidth*2)
         .attr("height", imgWidth*2)
         .attr("x", -1*imgWidth)
         .attr("y", -1*imgWidth);
-        d.radius *= 2;
     }
     
-    function smallNode(node, d) {
+    function smallNode(node) {
         node.attr("clip-path", "url(#clipCircle)")
         .attr("width", imgWidth)
         .attr("height", imgWidth)
         .attr("x", -1*imgWidth/2)
         .attr("y", -1*imgWidth/2);
-        d.radius *= 0.5;
-    }
-    function collide(node) {
-      var r = node.radius,
-          nx1 = node.x - r,
-          nx2 = node.x + r,
-          ny1 = node.y - r,
-          ny2 = node.y + r;
-          
-      return function(quad, x1, y1, x2, y2) {
-        if (quad.point && (quad.point !== node)) {
-          var x = node.x - quad.point.x,
-              y = node.y - quad.point.y,
-              l = Math.sqrt(x * x + y * y),
-              r = node.radius + quad.point.radius;
-          if (l < r) {
-            l = (l - r) / l * .5;
-            node.x -= x *= l;
-            node.y -= y *= l;
-            quad.point.x += x;
-            quad.point.y += y;
-          }
-        }
-        return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
-      };
     }
 
 
