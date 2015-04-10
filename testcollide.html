@@ -63,7 +63,8 @@ function matchPrefix(pmap, prefix){
 
 var svg = d3.select("#network").append("svg")
     .attr("height", height)
-    .attr("width", width);
+    .attr("width", width)
+    .style("background", "black");
 
 // Create a force directed layout object, which will set
 //  x and y pixel coordinates for nodes and edges, similar
@@ -161,14 +162,14 @@ var generateDisplay = function() {
     svg.append("clipPath")
         .attr("id", "clipCircle")
         .append("circle")
-            .attr("r", imgWidth / 2)
+            .attr("r", imgWidth*0.9 / 2)
             .attr("cx", 0)
             .attr("cy", 0);
             
     svg.append("clipPath")
     .attr("id", "clipCircleBig")
     .append("circle")
-        .attr("r", imgWidth)
+        .attr("r", imgWidth*0.9)
         .attr("cx", 0)
         .attr("cy", 0);
 
