@@ -1,0 +1,29 @@
+Add a node initially to the graph ("click me to start"). This gives us time to cache all of the images in the background
+
+{
+	ids: {[id] -> { AllyMap, EnemyMap, itemFrequencyMap}}
+	info: {[id] -> {imageString, fullName, nameKey}}
+	names: {[nameKey] -> id}
+	prefix: prefixMap // CAN THIS BE GENERATED LOCALLY?
+}
+
+
+
+cache images
+
+Threshold slider for drawing links AND champs
+ Need to get total number of games / champs
+
+initial graph has one node, click to show visualization
+
+
+get KDA (individually)
+Get wins, losses / champ
+Get raw number of multi-kills
+Champion gold at end of game
+
+
+Toggle between Allies, Enemies, Items
+
+
+
