@@ -127,7 +127,7 @@ function initializeSearch(){
     });
 }
 
-
+var flag = true;
 var tmpnode; // for debugging purposes
 
 var generateDisplay = function() {
@@ -153,9 +153,11 @@ var generateDisplay = function() {
     }
     console.log(graph)  
 
-
-    var lastnode;
-    var lastD;
+    // node is image
+    var lastNode, curNode;
+    
+    // d is the thing that moves
+    var lastD, curD;
     
     svg.append("clipPath")
         .attr("id", "clipCircle")
@@ -208,14 +210,17 @@ var generateDisplay = function() {
         .on("click", function(d){
             //TODO IMPLEMENT MOUSECLICK
             // makes last node clicked small again
-            if (lastnode != null) {
-                smallNode(lastnode, lastD);
+            if (lastNode != null) {
+                smallNode(lastNode, lastD);
             }
             tmpnode = d3.select(this);
+            
+            curNode = tmpnode;
+            curD = d;
             graph.links = d.friends;
             restart(d.id);
             bigNode(tmpnode, d);
-            lastnode = tmpnode;
+            lastNode = tmpnode;
             lastD = d;
 
         });
@@ -230,9 +235,22 @@ var generateDisplay = function() {
             .attr("x2", function(d) { return d.target.x; })
             .attr("y2", function(d) { return d.target.y; });
              
-        node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+        node.attr("transform", function(d) { 
+            // centers currently selected node
+            if ( d === curD ) {
+                if (d.x != width/2) {
+                    d.x += (width/2 - d.x)/60;
+                }
+                if (d.y != height/2) {
+                    d.y += (height/2 - d.y)/60;
+                }
+            }
+            // makes image follow the node
+            return "translate(" + d.x + "," + d.y + ")";
+            })
             .attr("x", function(d) { return d.x;})
             .attr("y", function(d) { return d.y;});
+        
     
     });
 
