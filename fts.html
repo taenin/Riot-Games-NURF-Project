@@ -1,0 +1,349 @@
+<html>
+<head>  
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+<style>
+div
+{
+    position: relative;
+}
+#mainSearch{
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 11;
+    background: transparent;
+    
+}
+#autocomplete{
+    position: absolute;    
+    top: 0;
+    left: 0; 
+    background: transparent;
+    z-index: 10;
+}
+</style>
+</head>
+<body>
+<center>
+    <div>
+        <input id="mainSearch" type="text" />
+        <input id="autocomplete" type="text" disabled="disabled" />
+    </div>
+    <div id="network"></div>
+</center>
+<script>
+var imgWidth = 45;
+var height = 1200;
+var width = 1600;
+var initGravity = 0.08;
+var liveGravity = 0.02;
+currentId = 0;
+
+
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min)) + min;
+}
+
+
+// node is image
+var lastNode, curNode;
+
+// d is the thing that moves
+var lastD, curD;
+
+
+function matchPrefix(pmap, prefix){
+    prefix = prefix.toLowerCase().replace(/\W/g, ''); //Make the prefix lowercase, remove any non-alphanumberic characters
+    if(!(prefix in pmap)){
+        return [];
+    }
+    var acc = [];
+    var pArray = pmap[prefix]
+    var ind;
+    for(ind = 0; ind < pArray.length; ind++){
+        if(pArray[ind] != ""){
+            acc = acc.concat(matchPrefix(pmap,prefix+pArray[ind]));
+        }
+        else{
+            acc.push(prefix);
+        }
+    }
+    return acc;
+}
+
+
+
+var svg = d3.select("#network").append("svg")
+    .attr("height", height)
+    .attr("width", width)
+    .style("background", "black");
+
+// Create a force directed layout object, which will set
+//  x and y pixel coordinates for nodes and edges, similar
+//  to how we use scales and map projections.
+var force = d3.layout.force()
+        .gravity(initGravity)
+        //.distance(100)
+        .charge(function(node){
+            return (curD === node ? -1000 : -150);
+        })
+        .size([width, height])
+        .linkStrength(function(link){
+            largestWeight = Math.max.apply(Math,graph.links.map(function(o){return o.weight;}));
+            return .5*Math.pow(link.weight / largestWeight, 0.5);
+             
+        });
+
+// Make an empty graph
+var graph = { nodes: [], links: [] };
+    
+var initialFollowers = 0.01;
+
+//Get Data
+var allies, opponents, pictures, prefixMap, searchData;
+var remaining = 3;
+var remaining_data = 2;
+
+d3.json("pmap.json", function(data) {
+    prefixMap = data;
+    if(!--remaining_data) initializeSearch();
+});
+
+d3.json("searchData.json", function(data) {
+    searchData = data;
+    if(!--remaining_data) initializeSearch();
+});
+
+
+d3.json("allies.json", function(data) {
+    allies = data;
+    if(!--remaining) generateDisplay();
+});
+
+d3.json("opponents.json", function(data) {
+    opponents = data;
+    if(!--remaining) generateDisplay();
+});
+
+d3.json("pictures.json", function(data) {
+    pictures = data;
+    if(!--remaining) generateDisplay();
+});
+
+function initializeSearch(){
+    $('#mainSearch').keyup(function(e){
+        var results = matchPrefix(prefixMap, $(this).val());
+        var output = results.length < 1 ? "" : searchData[results[0]].name;
+        var newValue = $(this).val() + output.slice($(this).val().length, output.length);
+        if(e.key === "ArrowRight" && output!=""){
+            newValue = output;
+            $('#mainSearch').val(newValue);
+        }
+        $('#autocomplete').val(newValue);
+    });
+}
+
+var flag = true;
+var tmpnode; // for debugging purposes
+
+var generateDisplay = function() {
+    //Create a graph
+    var keylist = Object.keys(allies);
+    console.log('new display');
+    graph = { nodes: [], links: [] };
+    // Create Nodes
+    for (var champId in allies) {
+        var newNode = {
+            id: champId,
+            radius: imgWidth/2,
+            friends: Object.keys(allies[champId]).map(
+                function(id){return {source: keylist.indexOf(champId), target: keylist.indexOf(id), weight: allies[champId][id]};}),
+            foes: Object.keys(opponents[champId]).map(
+                function(id){return {source: keylist.indexOf(champId), target: keylist.indexOf(id), weight: opponents[champId][id]};})
+        };
+        graph.nodes.push(newNode);
+
+        //Generate edges:
+        //graph.links = graph.links.concat(newNode.friends, newNode.foes);
+
+    }
+    console.log(graph)  
+
+    
+    
+    svg.append("clipPath")
+        .attr("id", "clipCircle")
+        .append("circle")
+            .attr("r", imgWidth*0.9 / 2)
+            .attr("cx", 0)
+            .attr("cy", 0);
+            
+    svg.append("clipPath")
+    .attr("id", "clipCircleBig")
+    .append("circle")
+        .attr("r", imgWidth*0.9)
+        .attr("cx", 0)
+        .attr("cy", 0);
+
+    force.nodes(graph.nodes)
+    .links(graph.links)
+    .start();
+
+    var link = svg.selectAll(".link")
+        .data(graph.links)
+        .enter().append("line")
+        .attr("class", "link")
+        .attr("stroke", "black")
+        .attr("stroke-width", function(d){return edgeScale(d.weight);});
+
+    var node = svg.selectAll(".node")
+        .data(graph.nodes)
+        .enter().append("g")
+        .attr("class", "node")
+        .call(force.drag);
+
+    node.append("image")
+        .attr("xlink:href", function(d){return pictures[d.id].image;})
+        .attr("clip-path", "url(#clipCircle)")
+        .attr("x", -1*imgWidth / 2)
+        .attr("y", -1*imgWidth / 2)
+        .attr("width", imgWidth)
+        .attr("height", imgWidth)
+        .on("mouseover", function(d) {
+            //TODO IMPLEMENT MOUSEOVER
+            tmpnode = d3.select(this);
+            tmpnode.style("opacity", 0.5);
+        })
+        .on("mouseout", function(d) {
+            //TODO IMPLEMENT MOUSEOUT (JUST REVERSE MOUSEOVER)
+            tmpnode = d3.select(this);
+            tmpnode.style("opacity", 1);
+        })
+        .on("click", function(d){
+            //TODO IMPLEMENT MOUSECLICK
+            // makes last node clicked small again
+            if (lastNode != null) {
+                smallNode(lastNode, lastD);
+            }
+            tmpnode = d3.select(this);
+            
+            force.gravity(liveGravity);
+            curNode = tmpnode;
+            curD = d;
+            graph.links = d.friends;
+            restart(d.id);
+            bigNode(tmpnode, d);
+            lastNode = tmpnode;
+            lastD = d;
+
+        });
+
+    force.on("tick", function() {
+        var q = d3.geom.quadtree(graph.nodes),
+            i = 0,
+            n = graph.nodes.length;
+        while (++i < n) q.visit(collide(graph.nodes[i]));
+        link.attr("x1", function(d) { return d.source.x; })
+            .attr("y1", function(d) { return d.source.y; })
+            .attr("x2", function(d) { return d.target.x; })
+            .attr("y2", function(d) { return d.target.y; });
+             
+        node.attr("transform", function(d) { 
+            // centers currently selected node
+            if ( d === curD ) {
+                if (d.x != width/2) {
+                    d.x += (width/2 - d.x)/60;
+                }
+                if (d.y != height/2) {
+                    d.y += (height/2 - d.y)/60;
+                }
+            }
+            // makes image follow the node
+            return "translate(" + d.x + "," + d.y + ")";
+            })
+            .attr("x", function(d) { return d.x;})
+            .attr("y", function(d) { return d.y;});
+        
+    
+    });
+
+    function restart(id) {
+        if(currentId!=id){
+            link = link.data(graph.links);
+            link.exit().remove();
+            link.enter().insert("line", ".node")
+                .attr("class", "link")
+                .attr("stroke-width", function(d){return 0.6*Math.pow(d.weight, 1/2);});
+                
+            svg.selectAll(".link")
+                .style("stroke", function (d) {
+                    var eh = "#" + getRandomInt(31,35).toString() + getRandomInt(31,35).toString() + "ff";
+                    return eh;
+                });
+            //node = node.data(graph.nodes);
+            //node.enter().insert("circle", ".cursor").attr("class", "node").attr("r", 5).call(force.drag);
+            force.links(graph.links)
+            .start();
+
+            currentId = id;
+        }
+    }
+    
+    function bigNode(node, d) {
+        node.attr("clip-path", "url(#clipCircleBig)")
+        .attr("width", imgWidth*2)
+        .attr("height", imgWidth*2)
+        .attr("x", -1*imgWidth)
+        .attr("y", -1*imgWidth);
+        d.radius *= 2;
+    }
+    
+    function smallNode(node, d) {
+        node.attr("clip-path", "url(#clipCircle)")
+        .attr("width", imgWidth)
+        .attr("height", imgWidth)
+        .attr("x", -1*imgWidth/2)
+        .attr("y", -1*imgWidth/2);
+        d.radius *= 0.5;
+    }
+    function collide(node) {
+      var r = node.radius,
+          nx1 = node.x - r,
+          nx2 = node.x + r,
+          ny1 = node.y - r,
+          ny2 = node.y + r;
+          
+      return function(quad, x1, y1, x2, y2) {
+        if (quad.point && (quad.point !== node)) {
+          var x = node.x - quad.point.x,
+              y = node.y - quad.point.y,
+              l = Math.sqrt(x * x + y * y),
+              r = node.radius + quad.point.radius;
+          if (l < r) {
+            l = (l - r) / l * .5;
+            node.x -= x *= l;
+            node.y -= y *= l;
+            quad.point.x += x;
+            quad.point.y += y;
+          }
+        }
+        return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+      };
+    }
+
+};
+    
+</script>
+</body>
+
+</html>
+    
+    
+    
+    
+    
+    
+    
+    
+    
