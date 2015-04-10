@@ -97,7 +97,13 @@ def createMaps(validExtensions=[".json"]):
 	mainMap = getChampMap()
 
 	#add a key for wukong
-	
+
+	#set up our wrapperMap--this is the map we'll write to a JSON
+	wrapperMap = {}
+	finalKeyList = ['ids', 'info', 'names', 'prefixmap']
+	for key in finalKeyList:
+		wrapperMap[key] = {}
+
 	for root, dirs, files in os.walk("."):
 	    for name in files:
 	    	key = os.path.join(root, name).replace("\\","/")
@@ -111,10 +117,25 @@ def createMaps(validExtensions=[".json"]):
 				except:
 					print "Failed to read " + key
 					fileR = {}
+	#for champId in mainMap['data']:
 	for champId in allyMap:
-		picMap[str(champId)] = getChampPicture(str(champId), mainMap, False)
+		entry = mainMap['data'][str(champId)].copy()
+		entry.update(getChampPicture(str(champId), mainMap, False))
+		picMap[str(champId)] = entry
+		wrapperMap['ids'][str(champId)] = {}
+		wrapperMap['ids'][str(champId)]['allies'] = allyMap[champId]
+		wrapperMap['ids'][str(champId)]['opponents'] = opponentMap[champId]
+		wrapperMap['ids'][str(champId)]['items'] = champToItemsMap[champId]
+
+	picMap.update(createItemMap(itemMap)) #Add items to picmap
 	prefixMap = createChampPrefixMap(refMap)
 
+	wrapperMap['info'] = picMap
+	wrapperMap['prefixmap'] = prefixMap
+	wrapperMap['names'] = refMap
+	with open('data.json', 'wb') as data_file:
+		json.dump(wrapperMap, data_file)
+	"""
 	with open('itemstats.json', 'wb') as data_file:
 		json.dump(champToItemsMap, data_file)
 	with open('imgData.json', 'wb') as data_file:
@@ -128,7 +149,7 @@ def createMaps(validExtensions=[".json"]):
 	with open('opponents.json', 'wb') as data_file:
 		json.dump(opponentMap, data_file)
 	with open('pictures.json', 'wb') as data_file:
-		json.dump(picMap, data_file)
+		json.dump(picMap, data_file)"""
 
 def createItemMap(itemMap):
 	"""Returns a smaller version of itemMap with global image locations"""
@@ -139,11 +160,11 @@ def createItemMap(itemMap):
 	return newMap
 
 def createLowerCaseKeys(mapWithKeys):
-	"""We return a copy of mapWithKeys with lower-case keys, mapping from keys to a name, title, key, and id"""
+	"""We return a copy of mapWithKeys with lower-case keys, mapping from keys to an id"""
 	newMapWithKeys = {}
 	for word in mapWithKeys:
 		champ = mapWithKeys[word]
-		newMapWithKeys[word.lower()] = {'name': champ['name'], 'title': champ['title'], 'key': champ['key'], 'id': champ['id'] }
+		newMapWithKeys[word.lower()] = champ['id']
 	return newMapWithKeys
 
 def createChampPrefixMap(mapWithKeys):
