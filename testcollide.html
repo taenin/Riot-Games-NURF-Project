@@ -38,6 +38,7 @@ var height = 1200;
 var width = 1200;
 currentId = 0;
 
+var fuck = true;
 
 function matchPrefix(pmap, prefix){
     prefix = prefix.toLowerCase().replace(/\W/g, ''); //Make the prefix lowercase, remove any non-alphanumberic characters
@@ -139,6 +140,7 @@ var generateDisplay = function() {
     for (var champId in allies) {
         var newNode = {
             id: champId,
+            radius: imgWidth/2,
             friends: Object.keys(allies[champId]).map(
                 function(id){return {source: keylist.indexOf(champId), target: keylist.indexOf(id), weight: allies[champId][id]};}),
             foes: Object.keys(opponents[champId]).map(
@@ -154,6 +156,7 @@ var generateDisplay = function() {
 
 
     var lastnode;
+    var lastD;
     
     svg.append("clipPath")
         .attr("id", "clipCircle")
@@ -207,13 +210,14 @@ var generateDisplay = function() {
             //TODO IMPLEMENT MOUSECLICK
             // makes last node clicked small again
             if (lastnode != null) {
-                smallNode(lastnode);
+                smallNode(lastnode, lastD);
             }
             tmpnode = d3.select(this);
             graph.links = d.friends;
             restart(d.id);
-            bigNode(tmpnode);
+            bigNode(tmpnode, d);
             lastnode = tmpnode;
+            lastD = d;
 
         });
 
@@ -250,33 +254,40 @@ var generateDisplay = function() {
         }
     }
     
-    function bigNode(node) {
+    function bigNode(node, d) {
         node.attr("clip-path", "url(#clipCircleBig)")
         .attr("width", imgWidth*2)
         .attr("height", imgWidth*2)
         .attr("x", -1*imgWidth)
         .attr("y", -1*imgWidth);
+        d.radius *= 2;
     }
     
-    function smallNode(node) {
+    function smallNode(node, d) {
         node.attr("clip-path", "url(#clipCircle)")
         .attr("width", imgWidth)
         .attr("height", imgWidth)
         .attr("x", -1*imgWidth/2)
         .attr("y", -1*imgWidth/2);
+        d.radius *= 0.5;
     }
     function collide(node) {
-      var r = node.width/2 +1000,
+      var r = node.radius,
           nx1 = node.x - r,
           nx2 = node.x + r,
           ny1 = node.y - r,
           ny2 = node.y + r;
+          if (fuck) {
+          console.log(node);
+          fuck = false;
+          }
+          
       return function(quad, x1, y1, x2, y2) {
         if (quad.point && (quad.point !== node)) {
           var x = node.x - quad.point.x,
               y = node.y - quad.point.y,
               l = Math.sqrt(x * x + y * y),
-              r = node.width + quad.point.width;
+              r = node.radius + quad.point.radius;
           if (l < r) {
             l = (l - r) / l * .5;
             node.x -= x *= l;
