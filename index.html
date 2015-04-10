@@ -75,15 +75,15 @@ var svg = d3.select("#network").append("svg")
 //  x and y pixel coordinates for nodes and edges, similar
 //  to how we use scales and map projections.
 var force = d3.layout.force()
-        .gravity(.08)
+        .gravity(0.08)
         //.distance(100)
         .charge(function(node){
-            return curD === node ? -1000 : -200;
+            return (curD === node ? -1000 : -150);
         })
         .size([width, height])
         .linkStrength(function(link){
             largestWeight = Math.max.apply(Math,graph.links.map(function(o){return o.weight;}));
-            return .3*link.weight / largestWeight;
+            return .5*link.weight / largestWeight;
              
         });
 
@@ -220,6 +220,7 @@ var generateDisplay = function() {
             }
             tmpnode = d3.select(this);
             
+            force.gravity(0.05);
             curNode = tmpnode;
             curD = d;
             graph.links = d.friends;
