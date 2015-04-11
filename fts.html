@@ -91,7 +91,7 @@ var force = d3.layout.force()
         .size([width, height])
         .linkStrength(function(link){
             largestWeight = Math.max.apply(Math,graph.links.map(function(o){return o.weight;}));
-            return .5*Math.pow(link.weight / largestWeight, 0.5);
+            return .2*Math.pow(link.weight / largestWeight, 0.5);
              
         });
 
@@ -277,11 +277,9 @@ var generateDisplay = function() {
                 .attr("stroke-width", function(d){return 0.6*Math.pow(d.weight, 1/2);});
                 
             svg.selectAll(".link")
-                .style("stroke", function (d) {
-                    var eh = "#" + getRandomInt(31,35).toString() + getRandomInt(31,35).toString() + "ff";
-                    return eh;
-                });
-            //node = node.data(graph.nodes);
+                .style("stroke", function() {
+                    return "hsl(" + 200 + (Math.random() * 40) + ",100%,50%)";
+                })
             //node.enter().insert("circle", ".cursor").attr("class", "node").attr("r", 5).call(force.drag);
             force.links(graph.links)
             .start();
